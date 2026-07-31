@@ -114,7 +114,7 @@ To obtain a focus analysis, we are going to analyze the data based on several hy
 > **Business Insight:** The most dramatic drops in churn come from **Online Security** (dropping from 31,3% to 14,6%) and **Premium Tech Support** (dropping from 31,2% to 15.2%). Having these services help customer to eliminate technical friction. In the other hand, while online backup and device protection plan reduce churn, the drops are mucn softer. Customers are care far more about their network actively working and being secure (Tech Support / Security) than they do about hardware warranties or cloud storage.
 
 <div align="center">
-  <img src="Visualizations/figure_10.png" alt="Connectivity Dissatisfaction=" width="80%">
+  <img src="Visualizations/figure_10.png" alt="Connectivity Dissatisfaction" width="80%">
   <p><i>Figure 10: Connectivity Dissatisfaction</i></p>
 </div>
 
@@ -123,4 +123,110 @@ To obtain a focus analysis, we are going to analyze the data based on several hy
 ---
 
 ## 🛠️Data Preprocessing
+To ensure the machine learning models could extract the maximum amount of signal, the dataset underwent a rigorous cleaning and transformation pipeline.
 
+### 1. Feature Engineering
+To give the models a deeper understanding of customer behavior and potential friction points, I engineered several new features from the existing raw data:
+1.  **Financial & Value Perception:**
+    * `Historical Avg Monthly Charge` & `Bill Shock`: Calculated the customer's historical avarage cost and created a `Bill Shock` flag to identify users whose current monthly charge exceeds their historical average.
+    * `Cost per GB`: Created a feature that capture the actual value the customer is getting for their data usage.
+    * `Receive Refund`: Flagged a customer whether they received any refund, which can indicate past billing disputes or service issues..
+2. **Service Engagement & Utilization:**
+    * `Total Services Subscribed`: Aggregated eight individual service columns (e.g., Online Security, Streaming TV, Tech Support) into a single numeric score to measure overall ecosystem lock-in.
+    * `Under-Utilizing Unlimited`: Created a highly targeted flag to identify customers paying for an 'Unlimited Data' plan but downloading less than the average user.
+3. **Demographics & Lifecycle:**
+    * `Household Size` & `Is Alone`: Combined marital status and dependent counts to determine the total household size, and flagged single-person households.
+    * `Tenure Group`: Binned raw continuous tenure data into clear lifecycle stages (New, Standard, Loyal, Very Loyal).
+    * `30 to 64` & `Referral a Friend`: Isolated the middle-aged demographic and flagged customers who have successfully referred others.
+
+### 2. Feature Reduction
+The next step was to streamline the dataset by removing features that offered no predictive value:
+* **Identifier:** Drop unique identifier (`Customer ID`).
+<div align="center">
+  <img src="Visualizations/figure_11.png" alt="Customer ID from df.info() Function" width="80%">
+  <p><i>Figure 11: Customer ID from df.info() Function</i></p>
+</div>
+
+* **Zero Variance:** Drop features that is just have 1 unique value, which are `Country` and `State`.
+<div align="center">
+  <img src="Visualizations/figure_12.png" alt="Country and State Distribution" width="80%">
+  <p><i>Figure 12: Country and State Distribution</i></p>
+</div>
+
+### 3. Data Splitting & Target Separation
+To establish a robust evaluation framework and prepare for the advance preprocessing (Data Oversampling and Data Transformation) and final modeling phase, the processed dataset was partitioned.
+
+* **Target Separation:** Isolated the primary prediction target (`Churn Label`) from the predictor features (X).
+* **Train-Val-Test Split**: Partitioned the data using 70/15/15 split. 70% of the data will be allocated for training the models, 15% be used for training helper (early stopping for boosting-based model), and 15% reserved as an unseen testing set to evaluate generalization capability.
+
+### 4. Handling Imbalance Target
+Telecommunications churn datasets are inherently imbalanced, as the majority of customers are retained while only a fraction leave. Training a model directly on this skewed data often results in a bias toward the majority class, severely hurting the model's ability to predict actual churners.
+<div align="left">
+  <img src="Visualizations/figure_13.png" alt="Churn Distribution" width="60%">
+  <p><i>Figure 13: Churn Distribution</i></p>
+</div>
+
+To solve this, I conducted an empirical comparison between two distinct balancing techniques to determine which yielded the best evaluation metrics (specifically maximizing Recall). The used models in this section are mostly tree-based algorithm considering the data skewness:
+
+* **Data-Level Resampling (SMOTE-NC)**: I tested the Synthetic Minority Over-sampling Technique for Nominal and Continuous features.
+<div align="left">
+  <img src="Visualizations/figure_14.png" alt="SMOTE-NC Evaluation" width="60%">
+  <p><i>Figure 14: SMOTE-NC Evaluation</i></p>
+</div>
+
+* **Algorithmic Class Weighting**: Alternatively, I tested cost-sensitive learning by adjusting the internal hyperparameters of the models (e.g., `class_weight='balanced'` or `scale_pos_weight`).
+<div align="left">
+  <img src="Visualizations/figure_15.png" alt="Class Weighting Evaluation" width="60%">
+  <p><i>Figure 15: Class Weighting Evaluation</i></p>
+</div>
+
+From those evaluations, Class Weighting method overperformed about ~10% in recall score. We are going to use Class Weighting to handle the imbalance target.
+
+### 5. Data Transformation
+#### a. Data Encoding
+To process the categorical variables, three distinct encoding strategies were utilized based on feature cardinality and structure:
+
+* **Binary Encoding:** Applied to boolean-like features (e.g. `Under 30`, `Senior Citizen`, `Married`, `Phone Service`, `Churn Label` etc.) and `Gender`.
+* **One-Hot Encoding:** Applied to lower-cardinality nominal categorical features (`Internet Type`, `Contract`, `Payment Method`, and `Tenure Group`). The handle_unknown='ignore' parameter was explicitly set to ensure the pipeline remains robust if it encounters unseen categories in the unseen test data.
+* **Target Encoding:** Utilized specifically for the high-cardinality features (`City`). By replacing the categories with the expected value of the target, the model can capture the geographical signal without inflating dimensionality. A smoothing factor (smooth='Auto') was applied to prevent overfitting on categories with limited samples.
+
+#### b. Data Scaling & Outlier Handling
+During the exploratory data analysis, I observed that several continuous numerical features (such as `Total Charges` and `Avg Monthly GB Download`) exhibited significant skewness and contained natural outliers. However, I deliberately chose not to apply feature scaling (e.g., StandardScaler, MinMaxScaler) or any outlier handler because of some reasons:
+
+* **Algorithm Sustainability:** The machine learning algorithms selected for this project are entirely tree-based ensemble methods (Random Forest, XGBoost, LightGBM, and CatBoost), which work in scale-invariant and extreme outliers.
+* **Preserving Predictive Signal:** In the context of telecommunication, an outlier ofter represents as a real and extreme customer behavior. Altering or removing these signals could destroy valuable signal.
+
+---
+
+## 🤖Modeling
+In this phase we are going to build a classification model that capable to predict customer churn (`Churn Label`) based on our processed data. I aimed to get maximum of recall score, so our model can capture a large amount of the churners. To ensure computational resources are invested efficiently, we adopted a structured modeling approach.
+
+### 1. Model Selection (Baseline Contest)
+Before committing to time-intensive hyperparameter tuning, it is critical to establish baseline performances across a diverse set of algorithms. This benchmarking step allows us to identify the architectures that naturally handle our dataset's structure best.
+
+**Baseline Results:**
+| Model | Accuracy | Precision | Recall | F1 | AUC |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| CatBoost | 0.849574 | 0.683735 | 0.807829 | 0.740620 | 0.919777 |
+| Lightgbm | 0.857143 | 0.708333 | 0.786477 | 0.745363 | 0.914985 |
+| Random Forest | 0.856197 | 0.715719 | 0.761566 | 0.737931 | 0.910674 |
+| Logistic Regression | 0.716178 | 0.478360 | 0.747331 | 0.583333 | 0.803573 |
+| XGBoost | 0.846736 | 0.714801 | 0.704626 | 0.709677 | 0.906629 |
+
+From these results, **CatBoost**, **LightGBM**, and **Random Forest** clearly emerged as the top three performers. They all achieved high recall scores (capturing over 75% of actual churners) while maintaining strong overall accuracy and AUC. Therefore, these three models will advance to the Hyperparameter Tuning phase.
+
+### 2. Model Diagnostic & Visual Analysis (Before Tuning)
+
+#### a. Learning Curve
+<div align="center">
+  <img src="Visualizations/figure_16.png" alt="Chart 1" width="600">
+  <br><br>
+  <img src="Visualizations/figure_17.png" alt="Chart 2" width="600">
+  <br><br>
+  <img src="Visualizations/figure_18.png" alt="Chart 3" width="600">
+  <p><i>Figure X: Learning Curve before Hyperparameter Tuning.</i></p>
+</div>
+
+That learning curve plot shows that recall on the training set vs. the validation set as the number of training samples increases. **CatBoost** training recall score close to 1 (which means almost perfect), while validation recall remains behind. This indicating overfitting gap. Meanwhile, **LightGBM** and **Random Forest** shows the same pattern (a big gap between training and evaluation recall), even recapturing the training recall about 100% of churners. This indicating that the models really fit with the data.
+
+#### b. ROC Curve & AUC
