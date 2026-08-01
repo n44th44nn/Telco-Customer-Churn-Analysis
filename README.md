@@ -224,9 +224,196 @@ From these results, **CatBoost**, **LightGBM**, and **Random Forest** clearly em
   <img src="Visualizations/figure_17.png" alt="Chart 2" width="600">
   <br><br>
   <img src="Visualizations/figure_18.png" alt="Chart 3" width="600">
-  <p><i>Figure X: Learning Curve before Hyperparameter Tuning.</i></p>
+  <p><i>Figure 16-18: Learning Curve before Hyperparameter Tuning.</i></p>
 </div>
 
 That learning curve plot shows that recall on the training set vs. the validation set as the number of training samples increases. **CatBoost** training recall score close to 1 (which means almost perfect), while validation recall remains behind. This indicating overfitting gap. Meanwhile, **LightGBM** and **Random Forest** shows the same pattern (a big gap between training and evaluation recall), even recapturing the training recall about 100% of churners. This indicating that the models really fit with the data.
 
 #### b. ROC Curve & AUC
+
+<div align="center">
+  <img src="Visualizations/figure_21.png" alt="Chart 1" width="400">
+  <br><br>
+  <img src="Visualizations/figure_22.png" alt="Chart 2" width="400">
+  <br><br>
+  <img src="Visualizations/figure_23.png" alt="Chart 3" width="400">
+  <p><i>Figure 21-23: ROC Graph before Hyperparameter Tuning.</i></p>
+</div>
+
+All those three baseline models already produce a strongly bowed curve that rises steeply at low false-positive rates and flattens out near the top before reaching FPR = 1. This is a sign that the model is confidently separating most churners from non-churners even before any tuning.
+
+### 3. Feature Selection
+<div align="center">
+  <img src="Visualizations/figure_24.png" alt="Chart 1" width="600">
+  <br><br>
+  <img src="Visualizations/figure_25.png" alt="Chart 2" width="600">
+  <br><br>
+  <img src="Visualizations/figure_26.png" alt="Chart 3" width="600">
+  <p><i>Figure 24-25: Feature Important</i></p>
+</div>
+The three best-performing tree-based models (CatBoost, LightGBM, Random Forest) were used to inspect feature importance. For each model, the 15 least important features were dropped, producing a model-specific reduced feature set. This reduces noise/redundant features while keeping each model's most influential predictors.
+
+### 4. Hyperparameter Tuning
+Each of the three reduced-feature models (CatBoost, LightGBM, Random Forest) was tuned independently using **Optuna**, running **50 trials per model** with the goal of **maximizing recall** on the validation set. Recall was chosen as the optimization target because, for churn prediction, failing to flag an actual churner is more costly than a false alarm.
+* **CatBoost** and **LightGBM** additionally used early stopping (50 rounds) during each trial's training, so Optuna also implicitly searched over how many boosting iterations were useful before validation performance stalled.
+* **Random Forest** doesn't have a native early-stopping mechanism, so `n_estimators` itself was included as a tunable parameter instead.
+
+**Search Space per Model:**
+| Model | Parameters searched | Range |
+|---|---|---|
+| CatBoost | `learning_rate` | 0.01 – 0.2 (log scale) |
+| | `depth` | 4 – 10 |
+| | `l2_leaf_reg` | 1.0 – 10.0 |
+| | `random_strength` | 0.1 – 10.0 (log scale) |
+| | `bagging_temperature` | 0.0 – 1.0 |
+| LightGBM | `learning_rate` | 0.01 – 0.1 (log scale) |
+| | `max_depth` | 3 – 9 |
+| | `num_leaves` | 10 – 100 |
+| | `subsample` | 0.5 – 1.0 |
+| | `colsample_bytree` | 0.5 – 1.0 |
+| | `reg_alpha` | 1e-8 – 10.0 (log scale) |
+| | `reg_lambda` | 1e-8 – 10.0 (log scale) |
+| Random Forest | `n_estimators` | 100 – 1000 (step 100) |
+| | `max_depth` | 3 – 20 |
+| | `min_samples_split` | 2 – 20 |
+| | `min_samples_leaf` | 1 – 20 |
+| | `max_features` | `sqrt`, `log2`, `None` |
+
+**Best Trial Found per Model:**
+| Model | Best trial | Best validation recall | Best parameters |
+|---|---|---|---|
+| CatBoost | 39 / 50 | 0.857 | `learning_rate=0.0141`, `depth=4`, `l2_leaf_reg=6.89`, `random_strength=7.77`, `bagging_temperature=0.51` |
+| LightGBM | 23 / 50 | 0.829 | `learning_rate=0.0251`, `max_depth=3`, `num_leaves=46`, `subsample=0.54`, `colsample_bytree=0.99`, `reg_alpha=9.84`, `reg_lambda=0.0003` |
+| Random Forest | 49 / 50 | 0.886 | `n_estimators=100`, `max_depth=4`, `min_samples_split=9`, `min_samples_leaf=18`, `max_features=None` |
+
+### 5. Model Diagnostic & Visual Analysis (After Tuning)
+
+#### a. Learning Curve
+<div align="center">
+  <img src="Visualizations/figure_27.png" alt="Chart 1" width="600">
+  <br><br>
+  <img src="Visualizations/figure_28.png" alt="Chart 2" width="600">
+  <br><br>
+  <img src="Visualizations/figure_29.png" alt="Chart 3" width="600">
+  <p><i>Figure 16-18: Learning Curve after Hyperparameter Tuning.</i></p>
+</div>
+
+* **Catboost:** The training/validation gap narrows noticeably compared to its pre-tuning curve. The shallower `depth=4` and stronger `l2_leaf_reg`/`random_strength `regularization pull training recall down slightly while validation recall climbs, so the two lines converge much closer together as training size increases.
+* **LightGBM:** Same pattern as CatBoost, `max_depth=3` plus `reg_alpha`/`reg_lambda` regularization close the gap substantially, with validation recall now tracking training recall far more closely than in the baseline version.
+* **Random Forest:** The gap also shrinks here. The tuned forest is far more constrained (`max_depth=4`, `min_samples_leaf=18`) than the baseline's unconstrained trees and validation recall rises the most dramatically of the three models. It still shows a bit more residual gap than CatBoost/LightGBM, which is expected since bagged trees are naturally more prone to memorizing training data than regularized, sequentially-boosted models.
+
+**Overall**, tuning + feature selection consistently narrowed the train/validation gap across all three models — the tuning step was primarily about controlling overfitting and improving generalization, not squeezing out extra raw training performance.
+
+#### b. ROC Curve & AUC
+
+<div align="center">
+  <img src="Visualizations/figure_30.png" alt="Chart 1" width="400">
+  <br><br>
+  <img src="Visualizations/figure_31.png" alt="Chart 2" width="400">
+  <br><br>
+  <img src="Visualizations/figure_32.png" alt="Chart 3" width="400">
+  <p><i>Figure 21-23: ROC Graph after Hyperparameter Tuning.</i></p>
+</div>
+
+**Overall**, AUC stayed essentially flat for CatBoost and LightGBM through tuning, while Random Forest traded some AUC for a large recall gain, a direct consequence of the tuning objective targeting recall rather than AUC.
+
+---
+
+## 🏆Final Evaluation & Conclusion
+The tuned models were retrained on their respective reduced feature sets and evaluated on the held-out test set:
+
+| Model | Accuracy | Precision | Recall | F1-Score | ROC-AUC |
+|---|---|---|---|---|---|
+| **CatBoost** | 0.830 | 0.632 | 0.861 | **0.729** | **0.920** |
+| **LightGBM** | 0.830 | 0.635 | 0.847 | 0.726 | 0.917 |
+| **Random Forest** | 0.785 | 0.561 | **0.886** | 0.687 | 0.892 |
+
+* **CatBoost** achieved the best overall balance (highest F1 and AUC).
+* **Random Forest** achieved the highest recall, useful if catching every potential churner is the priority, at the cost of more false positives.
+
+---
+
+## 🔥Future Improvement
+A few directions worth exploring beyond this project's current scope:
+* **Give regression-based models a fairer shot:** Logistic Regression was included as a baseline mainly for comparison, and the pipeline was built with tree-ensemble models in mind, so steps like feature scaling and outlier handling were skipped, since tree-based models don't need them. Despite that, Logistic Regression still landed a surprisingly reasonable AUC (~0.80) in the baseline evaluation. With proper preprocessing (standardization/normalization, outlier treatment, possibly polynomial or interaction features), it's worth revisiting regression-based models to see how much of that gap to the tree-ensemble models closes.
+* **Try ensemble methods that combine multiple models:** Rather than picking a single winner (CatBoost, LightGBM, or Random Forest), a stacking or voting ensemble that blends predictions from all three could capture complementary strengths.
+* **Deploy the model as an interactive app:** Wrapping the exported model in a lightweight app (using Streamlit for a quick interactive demo, or Flask/FastAPI for a proper REST API) would make the model usable outside the notebook.
+
+---
+
+## 📁Folder Structure
+
+```
+Telco-Chustomer-Churn-Analysis
+├── Datasets/
+│   ├── Modeling/
+│   │   ├── X_test.csv
+│   │   ├── X_train.csv
+│   │   ├── X_val.csv
+│   │   ├── y_test.csv
+│   │   ├── y_train.csv
+│   │   └── y_val.csv
+│   ├── Processed/
+│   │   └── processed_data.csv
+│   └── Raw/
+│       ├── Telco_customer_churn_1.csv
+│       ├── Telco_customer_churn_2.csv
+│       ├── Telco_customer_churn_3.csv
+│       ├── Telco_customer_churn_4.csv
+│       ├── Telco_customer_churn_5.csv
+│       └── Telco_customer_churn_6.csv
+├── Models/
+│   ├── CatBoost_Model.pkl
+│   ├── LightGBM_Model.pkl
+│   └── Random_Forest_Model.pkl
+├── Notebooks/
+│   ├── advance_preprocessing.ipynb
+│   ├── data_merging.ipynb
+│   ├── early_preprocessing.ipynb
+│   └── modeling.ipynb
+├── Visualizations/
+│   ├── figure_1.png
+│   ├── figure_2.png
+│   ├── ...
+│   └── figure_32.png
+├── README.md
+└── requirements.txt
+```
+
+---
+
+## 🚀How to Run (Step-by-Step)
+
+### Step 0 — Clone & Install Dependencies
+```bash
+git https://github.com/n44th44nn/Telco-Chustomer-Churn-Analysis.git
+cd Telco-Chustomer-Churn-Analysis
+```
+
+### Step 1 — Set Up a Virtual Environment
+```bash
+# Create the virtual environment
+python -m venv venv
+
+# Activate the virtual environment on Windows:
+venv\Scripts\activate
+
+# Activate the virtual environment on macOS/Linux:
+source venv/bin/activate
+```
+
+### Step 2 — Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### Step 3 — Launch Jupyter Notebook
+```bash
+jupyter notebook
+```
+
+### Step 4 — Execution Order
+1. `data_merging.ipynb`: Merges the raw separated datas and select usefull features for analysis
+2. `early_preprocessing.ipynb`: Cleans the raw data, handles missing values, and standardizes initial text features.
+3. `Advance_preprocessing.ipynb`: Handles feature engineering, geospatial coordinate mapping, scaling, target encoding, and splits the dataset to prevent data leakage.
+4. `modeling.ipynb`: Trains the baseline models, runs Optuna hyperparameter tuning, evaluates the learning curves, and extracts feature importances.
