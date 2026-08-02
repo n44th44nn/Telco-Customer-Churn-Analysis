@@ -3,6 +3,20 @@ Customer churn is a critical challenges in the telecommunication industry, where
 
 ---
 
+## 📖Outline
+1. [Project Overview](#project-overview)
+2. [Dataset Information](#dataset-information)
+3. [Exploratory Data Analysis](#exploratory-data-analysis)
+4. [Data Preprocessing](#️data-preprocessing)
+5. [Modeling](#modeling)
+6. [Final Evaluation](#final-evaluation--conclusion)
+7. [Future Improvement](#future-improvement)
+8. [Folder Structure](#folder-structure)
+9. [How to Run](#how-to-run-step-by-step)
+
+
+---
+
 ## 📌Project Overview
 ### The Objective
 The primary goal of this project is to analyze the IBM Telco Customer Churn dataset to uncover underlying behavioral patterns and predict potential churners. By maximazing the recall score for predicting the positive churn label, this machine learning model aims to catch as many potential churners as possible, enabling proactive retention strategies.
