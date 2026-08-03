@@ -398,9 +398,12 @@ Telco-Chustomer-Churn-Analysis
 
 ## 🚀How to Run (Step-by-Step)
 
-### Step 0 — Clone & Install Dependencies
+### Step 0 — Clone Repository
 ```bash
-git https://github.com/n44th44nn/Telco-Chustomer-Churn-Analysis.git
+# Clone repository
+git clone https://github.com/n44th44nn/Telco-Chustomer-Churn-Analysis.git
+
+# Change direction to cloned repository
 cd Telco-Chustomer-Churn-Analysis
 ```
 
@@ -427,7 +430,7 @@ jupyter notebook
 ```
 
 ### Step 4 — Execution Order
-1. `data_merging.ipynb`: Merges the raw separated datas and select usefull features for analysis
+1. `data_merging.ipynb`: Merges the raw separated datas and select usefull features for analysis.
 2. `early_preprocessing.ipynb`: Cleans the raw data, handles missing values, and standardizes initial text features.
 3. `Advance_preprocessing.ipynb`: Handles feature engineering, geospatial coordinate mapping, scaling, target encoding, and splits the dataset to prevent data leakage.
 4. `modeling.ipynb`: Trains the baseline models, runs Optuna hyperparameter tuning, evaluates the learning curves, and extracts feature importances.
