@@ -403,7 +403,7 @@ Telco-Chustomer-Churn-Analysis
 # Clone repository
 git clone https://github.com/n44th44nn/Telco-Chustomer-Churn-Analysis.git
 
-# Change direction to cloned repository
+# Change direction to the cloned repository
 cd Telco-Chustomer-Churn-Analysis
 ```
 
