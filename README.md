@@ -254,7 +254,7 @@ That learning curve plot shows that recall on the training set vs. the validatio
   <p><i>Figure 21-23: ROC Graph before Hyperparameter Tuning.</i></p>
 </div>
 
-All those three baseline models already produce a strongly bowed curve that rises steeply at low false-positive rates and flattens out near the top before reaching FPR = 1. This is a sign that the model is confidently separating most churners from non-churners even before any tuning.
+All of those three baseline models already produce a strongly bowed curve that rises steeply at low false-positive rates and flattens out near the top before reaching FPR = 1. This is a sign that the model is confidently separating most churners from non-churners even before any tuning.
 
 ### 3. Feature Selection
 <div align="center">
