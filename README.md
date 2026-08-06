@@ -1,5 +1,5 @@
 # ☎️IBM Telco Customer Churn Analysis
-Customer churn is a critical challenges in the telecommunication industry, where retaining existing users is significantly more cost-effective than acquiring new ones. This project leverages the IBM Telco Customer Churn dataset to uncover underlying behavioral patterns and predict potential churners.
+Customer churn is a critical challenge in the telecommunication industry, where retaining existing users is significantly more cost-effective than acquiring new ones. This project leverages the IBM Telco Customer Churn dataset to uncover underlying behavioral patterns and predict potential churners.
 
 ---
 
