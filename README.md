@@ -316,7 +316,7 @@ Each of the three reduced-feature models (CatBoost, LightGBM, Random Forest) was
 * **LightGBM:** Same pattern as CatBoost, `max_depth=3` plus `reg_alpha`/`reg_lambda` regularization close the gap substantially, with validation recall now tracking training recall far more closely than in the baseline version.
 * **Random Forest:** The gap also shrinks here. The tuned forest is far more constrained (`max_depth=4`, `min_samples_leaf=18`) than the baseline's unconstrained trees and validation recall rises the most dramatically of the three models. It still shows a bit more residual gap than CatBoost/LightGBM, which is expected since bagged trees are naturally more prone to memorizing training data than regularized, sequentially-boosted models.
 
-**Overall**, tuning + feature selection consistently narrowed the train/validation gap across all three models — the tuning step was primarily about controlling overfitting and improving generalization, not squeezing out extra raw training performance.
+**Overall**, tuning + feature selection consistently narrowed the train/validation gap across all three models. The tuning step was primarily about controlling overfitting and improving generalization, not squeezing out extra raw training performance.
 
 #### b. ROC Curve & AUC
 
