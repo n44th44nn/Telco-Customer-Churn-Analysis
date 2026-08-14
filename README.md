@@ -51,7 +51,7 @@ Our EDA phase served a dual purpose, which are understanding the underlying data
 
 ### Technical Data Assesment
 By evaluating the data's structure, we can identify several preprocessing requirements:
-* **Cardinality Analysis:** Evaluating the frequency of categorical variables to manage high cardinality. For instance, `City` feature contained many rare values, so we will group these rare values into an 'Others'.
+* **Cardinality Analysis:** Evaluating the frequency of categorical variables to manage high cardinality. For instance, `City` feature contained many rare values, therefor we will group these rare values into an 'Others'.
 * **Target Imbalance:** `Churn Label` confirmed a significant skew between retained and churned customers. We can handle this with using whether resampling techniques (SMOTE-NC) or Class Weighting method.
 * **Skewness Shape:** I detected that the numerical features is not really have a perfect skew. We can conclude a data transformation techniques or build robust machine learning algorithms, such as Random Forest and Gradient Boosting.
 
