@@ -30,7 +30,7 @@ To build a robust prediction model, establishing a comprehensive data science pi
 The data used in this project originates from [IBM Cognos Analytics](https://community.ibm.com/community/user/blogs/steven-macko/2019/07/11/telco-customer-churn-1113) sample datasets. It tracks customer churn, subscribed services, account information, and demographics for a fictional telecommunications company. I retrieved this specific version of the dataset from [Kaggle Telco customer churn (11.1.3+)](https://www.kaggle.com/datasets/ylchang/telco-customer-churn-1113). The raw data provided on Kaggle includes `Telco_customer_churn_demographics.xlsx`, `Telco_customer_churn_location.xlsx`, `Telco_customer_churn_population.xlsx`, `Telco_customer_churn_services.xlsx`, and `Telco_customer_churn_status.xlsx`.
 
 ### Data Integration Process
-From those information, not all features were relevant for our customer churn analysis. Therefore, we need to carefully select features and remove redundant or uninformative data points before merging.
+From those information, not of all those features were relevant for our customer churn analysis. Therefore, we need to carefully select features and remove redundant or uninformative data points before merging.
 
 #### Features Removed
 Several columns were excluded from the final master dataset as they did not contribute meaningful variance or were redundant:
